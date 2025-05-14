@@ -1,0 +1,103 @@
+ ✅ **Example: Functional Coverage of Address and Read/Write Fields**
+
+We’ll:
+
+* Define a `Packet` class with `addr` and `rw` fields.
+* Use a `covergroup` to monitor these fields.
+* Randomize and sample the coverage.
+
+---
+
+### **1. Packet Class with Covergroup**
+
+```systemverilog
+class Packet;
+
+    rand bit [3:0] addr; // 4-bit address
+    rand bit rw;         // 0 = read, 1 = write
+
+    // Covergroup declaration
+    covergroup pkt_cov @(posedge clk);
+        coverpoint addr {
+            bins low_range[] = {[0:3]};
+            bins mid_range[] = {[4:7]};
+            bins high_range[] = {[8:15]};
+        }
+
+        coverpoint rw {
+            bins read = {0};
+            bins write = {1};
+        }
+
+        // Cross coverage of address and rw
+        cross addr, rw;
+    endgroup
+
+    function new();
+        pkt_cov = new(); // create the covergroup instance
+    endfunction
+
+endclass
+```
+
+---
+
+### **2. Testbench**
+
+```systemverilog
+module tb;
+
+    logic clk;
+    Packet pkt;
+
+    // Clock generation
+    initial clk = 0;
+    always #5 clk = ~clk;
+
+    initial begin
+        pkt = new();
+
+        repeat (20) begin
+            assert(pkt.randomize());
+            @(posedge clk);
+            pkt.pkt_cov.sample(); // capture coverage each clock cycle
+        end
+
+        $display("Simulation complete. Analyze coverage in your simulator.");
+        $finish;
+    end
+
+endmodule
+```
+
+---
+
+## ✅ Explanation
+
+* The **`covergroup`** is triggered on **`posedge clk`**.
+* `coverpoint addr` has bins grouped by range.
+* `coverpoint rw` separates reads and writes.
+* `cross addr, rw` tracks all combinations like `{addr=5, rw=0}`, `{addr=12, rw=1}`, etc.
+* `.sample()` is called after each randomization to log coverage.
+
+---
+
+## ✅ Sample Output (from coverage report, not console)
+
+Assuming your simulator supports coverage analysis, it will generate a report showing:
+
+* Percentage of address bins hit
+* How many times each `rw` value occurred
+* Which address–rw combinations were missed
+
+---
+
+## ✅ Summary
+
+| Feature        | Purpose                                     |
+| -------------- | ------------------------------------------- |
+| `coverpoint`   | Track individual variable values            |
+| `cross`        | Track combinations of variables             |
+| `sample()`     | Records a snapshot of current values        |
+| Simulator Tool | Generates coverage reports after simulation |
+
